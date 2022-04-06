@@ -224,6 +224,21 @@ let
           '';
         };
 
+        after = mkOption {
+          type = with types; listOf str;
+          default = [];
+          description = ''
+            Define which other systemd services this container depends on. They will be added to both After and Requires for the unit.
+          '';
+          example = literalExpression ''
+            virtualisation.oci-containers.containers = {
+              node1 = {
+                dependsOn = [ "multi-user.target" ];
+              }
+            }
+          '';
+        };
+
         extraOptions = mkOption {
           type = with types; listOf str;
           default = [];
@@ -250,8 +265,8 @@ let
     dependsOn = map (x: "${cfg.backend}-${x}.service") container.dependsOn;
   in {
     wantedBy = [] ++ optional (container.autoStart) "multi-user.target";
-    after = lib.optionals (cfg.backend == "docker") [ "docker.service" "docker.socket" ] ++ dependsOn;
-    requires = dependsOn;
+    after = lib.optionals (cfg.backend == "docker") [ "docker.service" "docker.socket" ] ++ dependsOn ++ container.after;
+    requires = dependsOn ++ container.after;
     environment = proxy_env;
 
     path =
